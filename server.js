@@ -10,10 +10,16 @@ MongoClient.connect(db.url, (err, database) => {
   	return console.log(err);
   }
 
+  database.collection('vegetables').ensureIndex("name", {"unique" : true}, (err, data) => {
+     if(err) {
+       res.status(503).send({'error': 'Error in database'});
+    }
+  });
+
   app.set('db', database);
   app.use('/vegetables', vegetables);
-  
+
   app.listen(port, () => {
-    console.log('We are live on ' + port);
-  });               
+    console.log('Server running on port:' + port);
+  });             
 });

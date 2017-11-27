@@ -12,53 +12,102 @@ router.use((req, res, next) => {
 });
 
 router.route('/:name')
+	.all((req, res, next) => {
+		req.name = req.params.name.toLowerCase();
+	    req.query = { 'name': req.name };
+
+		next();
+	})
+
 	.get((req, res) => {
-	    const name = req.params.name.toLowerCase();
-	    const query = { 'name': name };
-	    db.collection('vegetables').findOne(query, (err, item) => {
+	    db.collection('vegetables').findOne(req.query, (err, item) => {
 	      	if (err) {
-	        	res.send({'error':'An error has occurred'});
+	        	res.status(503).send({'error':'Error in database'});
+	      	} else if(!item) {
+	      		res.status(400).send({'error': 'Error in request'});
 	      	} else {
-	        	res.send(item);
-	      	} 
+	      		res.send(item);
+	      	}
 	    });
   	})
 
   	.delete((req, res) => {
-    	const name = req.params.name.toLowerCase();
-	    const query = { 'name': name };
-    	db.collection('vegetables').remove(query, (err, item) => {
+    	db.collection('vegetables').remove(req.query, (err, item) => {
       		if (err) {
-        		res.send({'error':'An error has occurred'});
-      		} else {
-        		res.send('Vegetable ' + name + ' deleted!');
-      		} 
+        		res.status(503).send({'error':'Error in database'});
+      		} else if(!item.result.n) {
+	      		res.status(400).send({'error': 'Error in request or product isn\'t exist'});
+	      	} else {
+	      		res.send({'message': `Product ${req.name} is deleted`});
+	      	}
     	});
   	})
 
   	.put(parseUrlencoded, (req, res) => {
-	    const name = req.params.name.toLowerCase();
-	    const query = { 'name': name };
-	    console.log(query);
-	    const vegetable = { name: req.body.name.toLowerCase(), price: parseFloat(req.body.price) };
-	    console.log(vegetable);
-	    db.collection('vegetables').update(query, vegetable, (err, result) => {
+		let vegetable = {};
+		try {
+			const name = req.body.name.toLowerCase(),
+				  price = parseFloat(req.body.price);
+				  
+			if(!name || isNaN(price)) {
+				throw Error();
+			} else {
+				vegetable = { name, price };
+			}
+		} catch(e) {
+			res.status(400).send({'error': 'Error in request'});
+			return;
+		}
+
+	    db.collection('vegetables').update(req.query, vegetable, (err, item) => {
 	      	if (err) {
-	          	res.send({'error':'An error has occurred'});
+	          	res.status(503).send({'error':'Error in database'});
+	      	} else if(!item.result.n) {
+				res.status(400).send({'error': 'Error in request or product isn\'t exist'});
 	      	} else {
-	          	res.send(vegetable);
+	          	res.send({'message': `Product ${req.name} is updated`});
 	      	} 
 	    });
   	});
 
 router.route('/')
-	.post(parseUrlencoded, (req, res) => {
-    	const vegetable = { name: req.body.name.toLowerCase(), price: parseFloat(req.body.price) };
-    	db.collection('vegetables').insert(vegetable, (err, result) => {
-	      	if (err) { 
-	        	res.send({ 'error': 'An error has occurred' }); 
+	.get((req, res) => {
+		db.collection('vegetables').find({}).toArray((err, item) => {
+			if (err) {
+	        	res.status(503).send({'error':'Error in database'});
+	      	} else if(!item.length) {
+	      		res.send({'message': 'Products list is empty'});
 	      	} else {
-	        	res.send(result.ops[0]);
+		        res.send(item);
+		    }
+		});
+	})
+
+	.post(parseUrlencoded, (req, res) => {
+		let vegetable = {};
+		try {
+			const name = req.body.name.toLowerCase(),
+				  price = parseFloat(req.body.price);
+
+			if(!name || isNaN(price)) {
+				throw Error();
+			} else {
+				vegetable = { name, price };
+			}
+		} catch(e) {
+			res.status(400).send({'error': 'Error in request'});
+			return;
+		}
+
+    	db.collection('vegetables').insert(vegetable, (err, result) => {
+	      	if (err) {
+	      		if(err.errmsg.includes('duplicate')) {
+	      			res.status(400).send({'error':'Duplicate name of products'});
+	      		} else {
+		        	res.status(503).send({'error':'Error in database'});
+		        }
+	      	} else {
+	        	res.status(201).send({'message': 'Product is added'});
 	      	}
     	});
   	});
