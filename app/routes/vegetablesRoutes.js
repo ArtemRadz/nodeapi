@@ -1,15 +1,8 @@
 const express = require('express'),
 	  router = express.Router(),
 	  bodyParser = require('body-parser'),
+	  db = require('../db');
 	  parseUrlencoded = bodyParser.urlencoded({extended: false});
-let db = {};
-
-router.use((req, res, next) => {
-	db = req.app.get('db');
-	if(db) {
-		next();
-	}
-});
 
 router.route('/:name')
 	.all((req, res, next) => {
@@ -20,7 +13,7 @@ router.route('/:name')
 	})
 
 	.get((req, res) => {
-	    db.collection('vegetables').findOne(req.query, (err, item) => {
+	    db.get().collection('vegetables').findOne(req.query, (err, item) => {
 	      	if (err) {
 	        	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item) {
@@ -32,7 +25,7 @@ router.route('/:name')
   	})
 
   	.delete((req, res) => {
-    	db.collection('vegetables').remove(req.query, (err, item) => {
+    	db.get().collection('vegetables').remove(req.query, (err, item) => {
       		if (err) {
         		res.status(503).send({'error':'Error in database'});
       		} else if(!item.result.n) {
@@ -59,7 +52,7 @@ router.route('/:name')
 			return;
 		}
 
-	    db.collection('vegetables').update(req.query, vegetable, (err, item) => {
+	    db.get().collection('vegetables').update(req.query, vegetable, (err, item) => {
 	      	if (err) {
 	          	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item.result.n) {
@@ -72,7 +65,7 @@ router.route('/:name')
 
 router.route('/')
 	.get((req, res) => {
-		db.collection('vegetables').find({}).toArray((err, item) => {
+		db.get().collection('vegetables').find({}).toArray((err, item) => {
 			if (err) {
 	        	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item.length) {
@@ -99,7 +92,7 @@ router.route('/')
 			return;
 		}
 
-    	db.collection('vegetables').insert(vegetable, (err, result) => {
+    	db.get().collection('vegetables').insert(vegetable, (err, result) => {
 	      	if (err) {
 	      		if(err.errmsg.includes('duplicate')) {
 	      			res.status(400).send({'error':'Duplicate name of products'});

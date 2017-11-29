@@ -1,25 +1,20 @@
 const express = require('express'),
-      MongoClient = require('mongodb').MongoClient,
-      db = require('./config/db'),
+      dbUrl = require('./config/db'),
       app = express(),
       port = 8080,
-      vegetables = require('./app/routes/vegetablesRoutes');
+      vegetables = require('./app/routes/vegetablesRoutes'),
+      db = require('./app/db');
 
-MongoClient.connect(db.url, (err, database) => {
-  if (err) {
-  	return console.log(err);
+
+app.use('/vegetables', vegetables);
+
+db.connect(dbUrl.url, (err) => {
+  if(err) {
+    console.log('unable');
+    process.exit(1);
+  } else {
+    app.listen(port, () => {
+      console.log('Server running on port:' + port);
+    });   
   }
-
-  database.collection('vegetables').ensureIndex("name", {"unique" : true}, (err, data) => {
-     if(err) {
-       res.status(503).send({'error': 'Error in database'});
-    }
-  });
-
-  app.set('db', database);
-  app.use('/vegetables', vegetables);
-
-  app.listen(port, () => {
-    console.log('Server running on port:' + port);
-  });             
 });
