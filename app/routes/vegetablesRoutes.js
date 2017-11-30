@@ -1,8 +1,14 @@
 const express = require('express'),
 	  router = express.Router(),
 	  bodyParser = require('body-parser'),
-	  db = require('../db');
-	  parseUrlencoded = bodyParser.urlencoded({extended: false});
+	  mongoose = require('../database/mongoose');
+	  parseUrlencoded = bodyParser.urlencoded({extended: false}),
+	  Schema = mongoose.Schema,
+	  Vegetable = new Schema({
+		name: { type: String, required: true, index: {unique: true}},
+		price: { type: Number, required: true}
+	  }),
+	  VegetableModel = mongoose.model('vegetables', Vegetable);
 
 router.route('/:name')
 	.all((req, res, next) => {
@@ -13,11 +19,11 @@ router.route('/:name')
 	})
 
 	.get((req, res) => {
-	    db.get().collection('vegetables').findOne(req.query, (err, item) => {
+	    return VegetableModel.findOne(req.query, (err, item) => {
 	      	if (err) {
 	        	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item) {
-	      		res.status(400).send({'error': 'Error in request'});
+	      		res.status(400).send({'error': 'Error in request or product isn\'t exist'});
 	      	} else {
 	      		res.send(item);
 	      	}
@@ -25,19 +31,22 @@ router.route('/:name')
   	})
 
   	.delete((req, res) => {
-    	db.get().collection('vegetables').remove(req.query, (err, item) => {
-      		if (err) {
-        		res.status(503).send({'error':'Error in database'});
-      		} else if(!item.result.n) {
-	      		res.status(400).send({'error': 'Error in request or product isn\'t exist'});
-	      	} else {
-	      		res.send({'message': `Product ${req.name} is deleted`});
-	      	}
+    	return VegetableModel.findOne(req.query, (err, vegetable) => {
+    		if(!vegetable) {
+    			res.status(400).send({'error': 'Error in request or product isn\'t exist'});
+    		}
+			return vegetable.remove((err) => {
+	      		if (err) {
+	        		res.status(503).send({'error':'Error in database'});
+	      		} else {
+		      		res.send({'message': `Product ${req.name} is deleted`});
+		      	}
+    		});
     	});
   	})
 
   	.put(parseUrlencoded, (req, res) => {
-		let vegetable = {};
+		let newVegetable = {};
 		try {
 			const name = req.body.name.toLowerCase(),
 				  price = parseFloat(req.body.price);
@@ -45,27 +54,34 @@ router.route('/:name')
 			if(!name || isNaN(price)) {
 				throw Error();
 			} else {
-				vegetable = { name, price };
+				newVegetable = { name, price };
 			}
 		} catch(e) {
 			res.status(400).send({'error': 'Error in request'});
 			return;
 		}
 
-	    db.get().collection('vegetables').update(req.query, vegetable, (err, item) => {
-	      	if (err) {
-	          	res.status(503).send({'error':'Error in database'});
-	      	} else if(!item.result.n) {
-				res.status(400).send({'error': 'Error in request or product isn\'t exist'});
-	      	} else {
-	          	res.send({'message': `Product ${req.name} is updated`});
-	      	} 
-	    });
+		return VegetableModel.findOne(req.query, (err, vegetable) => {
+    		if(!vegetable) {
+    			res.status(400).send({'error': 'Error in request or product isn\'t exist'});
+    		}
+
+    		vegetable.name = newVegetable.name;
+    		vegetable.price = newVegetable.price;
+
+			return vegetable.save((err) => {
+	      		if (err) {
+	        		res.status(503).send({'error':'Error in database'});
+	      		} else {
+		      		res.send({'message': `Product ${req.name} is updated`});
+		      	}
+    		});
+    	});
   	});
 
 router.route('/')
 	.get((req, res) => {
-		db.get().collection('vegetables').find({}).toArray((err, item) => {
+		return VegetableModel.find((err, item) => {
 			if (err) {
 	        	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item.length) {
@@ -92,7 +108,12 @@ router.route('/')
 			return;
 		}
 
-    	db.get().collection('vegetables').insert(vegetable, (err, result) => {
+		const newVegetable = new VegetableModel({
+			name: vegetable.name,
+			price: vegetable.price
+		});
+
+    	newVegetable.save((err, result) => {
 	      	if (err) {
 	      		if(err.errmsg.includes('duplicate')) {
 	      			res.status(400).send({'error':'Duplicate name of products'});
