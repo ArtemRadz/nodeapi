@@ -1,14 +1,8 @@
 const express = require('express'),
 	  router = express.Router(),
 	  bodyParser = require('body-parser'),
-	  mongoose = require('../database/mongoose');
 	  parseUrlencoded = bodyParser.urlencoded({extended: false}),
-	  Schema = mongoose.Schema,
-	  Vegetable = new Schema({
-		name: { type: String, required: true, index: {unique: true}},
-		price: { type: Number, required: true}
-	  }),
-	  VegetableModel = mongoose.model('vegetables', Vegetable);
+	  Vegetable = require('../models/vegetable');
 
 router.route('/:name')
 	.all((req, res, next) => {
@@ -19,7 +13,7 @@ router.route('/:name')
 	})
 
 	.get((req, res) => {
-	    return VegetableModel.findOne(req.query, (err, item) => {
+	    return Vegetable.findOne(req.query, (err, item) => {
 	      	if (err) {
 	        	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item) {
@@ -31,11 +25,13 @@ router.route('/:name')
   	})
 
   	.delete((req, res) => {
-    	return VegetableModel.findOne(req.query, (err, vegetable) => {
+    	return Vegetable.findOne(req.query, (err, vegetable) => {
     		if(!vegetable) {
     			res.status(400).send({'error': 'Error in request or product isn\'t exist'});
+    			return;
     		}
-			return vegetable.remove((err) => {
+    		
+    		return vegetable.remove((err) => {
 	      		if (err) {
 	        		res.status(503).send({'error':'Error in database'});
 	      		} else {
@@ -47,23 +43,22 @@ router.route('/:name')
 
   	.put(parseUrlencoded, (req, res) => {
 		let newVegetable = {};
-		try {
-			const name = req.body.name.toLowerCase(),
-				  price = parseFloat(req.body.price);
+ 			name = req.body.name,
+			price = req.body.price;
 				  
-			if(!name || isNaN(price)) {
-				throw Error();
-			} else {
-				newVegetable = { name, price };
-			}
-		} catch(e) {
+		if(!name || isNaN(price)) {
 			res.status(400).send({'error': 'Error in request'});
 			return;
+		} else {
+			name = name.toLowerCase();
+			price = parseFloat(price);
+			newVegetable = { name, price };
 		}
 
-		return VegetableModel.findOne(req.query, (err, vegetable) => {
+		return Vegetable.findOne(req.query, (err, vegetable) => {
     		if(!vegetable) {
     			res.status(400).send({'error': 'Error in request or product isn\'t exist'});
+    			return;
     		}
 
     		vegetable.name = newVegetable.name;
@@ -81,7 +76,7 @@ router.route('/:name')
 
 router.route('/')
 	.get((req, res) => {
-		return VegetableModel.find((err, item) => {
+		return Vegetable.find((err, item) => {
 			if (err) {
 	        	res.status(503).send({'error':'Error in database'});
 	      	} else if(!item.length) {
@@ -93,22 +88,20 @@ router.route('/')
 	})
 
 	.post(parseUrlencoded, (req, res) => {
-		let vegetable = {};
-		try {
-			const name = req.body.name.toLowerCase(),
-				  price = parseFloat(req.body.price);
+		let vegetable = {},
+ 			name = req.body.name,
+			price = req.body.price;
 
-			if(!name || isNaN(price)) {
-				throw Error();
-			} else {
-				vegetable = { name, price };
-			}
-		} catch(e) {
+		if(!name || isNaN(price)) {
 			res.status(400).send({'error': 'Error in request'});
 			return;
+		} else {
+			name = name.toLowerCase();
+			price = parseFloat(price);
+			vegetable = { name, price };
 		}
 
-		const newVegetable = new VegetableModel({
+		const newVegetable = new Vegetable({
 			name: vegetable.name,
 			price: vegetable.price
 		});
