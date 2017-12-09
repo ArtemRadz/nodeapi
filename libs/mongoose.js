@@ -1,7 +1,8 @@
 const mongoose = require('mongoose'),
-      dbUrl = require('../config/db');
+	  config = require('../config'),
+      dbUrl = config.get('mongoose:uri');
 
-mongoose.connect(dbUrl.url);
+mongoose.connect(dbUrl);
 
 var db = mongoose.connection;
 
