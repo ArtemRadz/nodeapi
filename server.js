@@ -1,8 +1,7 @@
 const express = require('express'),
       app = express(),
-      config = require('./config'),
-      port = config.get('port'),
-      vegetables = require('./routes/vegetablesRoutes');
+      port = 8080,
+      vegetables = require('./app/routes/vegetablesRoutes');
 
 app.use('/api/vegetables', vegetables);
 
