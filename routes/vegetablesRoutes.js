@@ -1,6 +1,11 @@
 const express = require('express'),
 	  router = express.Router(),
 	  bodyParser = require('body-parser'),
+	  jwtAuthz = require('express-jwt-authz'),
+	  checkScopesRead = jwtAuthz([ 'read:products' ]),
+	  checkScopesWrite = jwtAuthz([ 'write:products' ]),
+	  checkScopesUpdate = jwtAuthz([ 'update:products' ]),
+	  checkScopesDelete = jwtAuthz([ 'delete:products' ]),
 	  parseUrlencoded = bodyParser.urlencoded({extended: false}),
 	  Vegetable = require('../models/vegetable');
 
@@ -12,7 +17,7 @@ router.route('/:name')
 		next();
 	})
 
-	.get((req, res) => {
+	.get(checkScopesRead, (req, res) => {
 	    return Vegetable.findOne(req.query, (err, item) => {
 	      	if (err) {
 	        	res.status(503).send({'error':'Error in database'});
@@ -24,7 +29,7 @@ router.route('/:name')
 	    });
   	})
 
-  	.delete((req, res) => {
+  	.delete(checkScopesDelete, (req, res) => {
     	return Vegetable.findOne(req.query, (err, vegetable) => {
     		if(!vegetable) {
     			res.status(400).send({'error': 'Error in request or product isn\'t exist'});
@@ -41,7 +46,7 @@ router.route('/:name')
     	});
   	})
 
-  	.put(parseUrlencoded, (req, res) => {
+  	.put(checkScopesUpdate, parseUrlencoded, (req, res) => {
 		let newVegetable = {};
  			name = req.body.name,
 			price = req.body.price;
@@ -75,7 +80,7 @@ router.route('/:name')
   	});
 
 router.route('/')
-	.get((req, res) => {
+	.get(checkScopesRead, (req, res) => {
 		return Vegetable.find((err, item) => {
 			if (err) {
 	        	res.status(503).send({'error':'Error in database'});
@@ -87,7 +92,7 @@ router.route('/')
 		});
 	})
 
-	.post(parseUrlencoded, (req, res) => {
+	.post(checkScopesWrite, parseUrlencoded, (req, res) => {
 		let vegetable = {},
  			name = req.body.name,
 			price = req.body.price;
