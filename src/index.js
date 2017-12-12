@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from './App'
+import { makeMainRoutes } from './routes';
 import registerServiceWorker from './registerServiceWorker';
 import './normalize.css';
 import './index.css';
 
-ReactDOM.render(<App />, document.getElementById('root'));
+const routes = makeMainRoutes();
+
+ReactDOM.render(routes, document.getElementById('root'));
 registerServiceWorker();
